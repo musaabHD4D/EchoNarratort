@@ -199,3 +199,20 @@ class TTSEngine:
     def is_model_loaded(self) -> bool:
         """Check if a model is currently loaded"""
         return self.current_model is not None
+    
+    def fetch_models_async(self, callback: Callable[[List[str]], None]):
+        """Fetch models asynchronously to prevent UI freezing"""
+        def _fetch_thread():
+            models = self.fetch_models()
+            # Call callback in main thread context (tkinter safe)
+            if hasattr(callback, '__call__'):
+                # For tkinter, we need to schedule the callback
+                import tkinter as tk
+                root = tk._default_root
+                if root:
+                    root.after(0, lambda: callback(models))
+                else:
+                    callback(models)
+        
+        thread = threading.Thread(target=_fetch_thread, daemon=True)
+        thread.start()
